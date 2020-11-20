@@ -1,5 +1,12 @@
 #include <SoftwareSerial.h>
 SoftwareSerial sim(12, 14);
+#include <FirebaseArduino.h>
+#include <ESP8266WiFi.h>
+
+#define FIREBASE_HOST "prototypeproject-eeb91.firebaseio.com"
+#define FIREBASE_AUTH "BImIm9llfvfendC2Z1IgjbU2yMNMr48cwswG2n8f"
+#define WIFI_SSID "TP-LINK_2D36" //name
+#define WIFI_PASSWORD "09107809998" //pass
 
 String number = "+639555730503"; 
 
@@ -8,10 +15,8 @@ String number = "+639555730503";
 
 const int us_trig_pin = 16;
 const int us_echo_pin = 5;
-
-const int led_green = 4;
-const int led_red = 0;
-const int led_blue = 2;
+ 
+const int led_red = 0; 
 
 const int buzzer = 13;
 
@@ -31,13 +36,33 @@ void setup() {
 //  US config
   pinMode(us_trig_pin,OUTPUT);
   pinMode(us_echo_pin,INPUT);
+   
+  pinMode(led_red,OUTPUT); 
   
-//  pinMode(led_green,OUTPUT);
-  pinMode(led_red,OUTPUT);
-//  pinMode(led_blue,OUTPUT);
+  pinMode(buzzer,OUTPUT);  
   
-  pinMode(buzzer,OUTPUT); 
-  digitalWrite(led_green, HIGH);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  Serial.print("connecting");
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print(".");
+    delay(500);
+  }
+  Serial.println();
+  Serial.print("connected: ");
+  Serial.println(WiFi.localIP());
+  
+  Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH);
+  Serial.print("Starting ");
+    for(int i = 0; i < 10; i++){
+      Serial.print(".");
+      digitalWrite(led_red,LOW);
+      delay(500);
+      digitalWrite(led_red,HIGH);
+      delay(1000);
+      }
+      
+  Serial.print("started "); 
+  delay(2000);
 }
 
 void loop() { 
@@ -48,8 +73,10 @@ void loop() {
   calWl(); 
   if(isWlDanger && isUSDanger){
     danger();
+    Firebase.setFloat("isdanger", true);
   }else{
     normal();
+    Firebase.setFloat("isdanger", false);
   }
   if (sim.available() > 0)
     Serial.write(sim.read());
@@ -77,6 +104,7 @@ void calUs(){
   if(distance <= 15){
     isUSDanger = true;
   }
+  Firebase.setFloat("distance", distance); 
 }
 
 void calWl(){
@@ -85,34 +113,30 @@ void calWl(){
     Serial.println("Wl : empty"); 
     isWlDanger = false;
   }else if(resval > 100 && resval <= 300){
-    Serial.println("Wl : low"); 
-    isWlDanger = false;
+    Serial.println("Wl : low");
+    isWlDanger = true;
   }else if(resval > 300 && resval <= 330){
     Serial.println("Wl : medium"); 
-   isWlDanger = false;
+    isWlDanger = true;
   }else if(resval > 330){
     Serial.println("Wl : high");
     isWlDanger = true;
   }
+  Firebase.setFloat("water_level", resval); 
   Serial.println(resval);
 }
 
 void normal(){
   isBlink = false;
   isSend = false;
-  digitalWrite(led_red, HIGH);
-  digitalWrite(led_blue, LOW);
-  digitalWrite(buzzer, LOW);
+  digitalWrite(led_red, HIGH); 
+  digitalWrite(buzzer, LOW); 
 }
 
 void danger(){
   if(isBlink){
-    digitalWrite(led_red, LOW);
-    digitalWrite(led_blue, HIGH);
-  }else{ 
-    digitalWrite(led_blue, LOW);
-    digitalWrite(led_red, HIGH);
-  }
+    digitalWrite(led_red, LOW); 
+  } 
   isBlink = !isBlink;
   digitalWrite(buzzer, HIGH);
   if(!isSend){
