@@ -4,11 +4,13 @@ SoftwareSerial sim(12, 14);
 #include <ESP8266WiFi.h>
 
 #define FIREBASE_HOST "prototypeproject-eeb91.firebaseio.com"
-#define FIREBASE_AUTH "UCZ5lFED8KxcprRhIHzt1uk4ac2OEmhB1GfdTp6S"
-#define WIFI_SSID "TP-LINK_2D36" //name
-#define WIFI_PASSWORD "09107809998" //pass
+#define FIREBASE_AUTH "BImIm9llfvfendC2Z1IgjbU2yMNMr48cwswG2n8f"
+#define WIFI_SSID "PAG PALIT UG IMO" //name
+#define WIFI_PASSWORD "loslos123!" //pass
 
-String number = "+639555730503"; 
+const int count_number = 3; //Pila kabuok sendan
+int count_number_send = 0;
+String  number[count_number] = {"+639096813212","+639752639147","+639555730503"}; 
  
 //3 secsduration 
 #define flow_meter_sensor  D2 
@@ -183,7 +185,7 @@ void notifyMsg()
   Serial.println("NOTIFICATION SENT");
   sim.println("AT+CMGF=1");
   delay(1000);
-  sim.println("AT+CMGS=\"" + number + "\"\r");
+  sim.println("AT+CMGS=\"" + number[count_number_send] + "\"\r");
   delay(1000);
   String SMS = "Flood alert: the flood has reach the 1st level color code: yellow, distance: " + String(distance)+", water flow rate: "+flowRate+"L/min, output liquid quantity:"+totalMilliLitres+"mL /"+totalMilliLitres/1000+"L.";
   if(level==1 ){
@@ -195,13 +197,20 @@ void notifyMsg()
   }
     
   Firebase.setString("sms", SMS);
+ 
   Serial.println(SMS);
   
   sim.println(SMS);
   delay(100);
   sim.println((char)26);
-  delay(1000);
-  isSend = true;
+  delay(6000);
+  count_number_send = count_number_send+ 1;
+  if( count_number_send == count_number){
+    isSend = true;
+    count_number_send = 0;
+  }else{
+    notifyMsg();
+  }
 }
 void flowMeter(){ 
   currentMillis = millis();
